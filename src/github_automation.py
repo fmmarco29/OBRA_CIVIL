@@ -50,7 +50,7 @@ Para garantizar la máxima velocidad de procesamiento en local y realizar prueba
    ```
 2. Ejecutar la consola interactiva de Streamlit:
    ```bash
-   streamlit run app.py
+   streamlit run app_streamlit.py
    ```
    La aplicación estará disponible inmediatamente en `http://localhost:8501`.
 
@@ -100,7 +100,7 @@ EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "app_streamlit.py", "--server.port=8501", "--server.address=0.0.0.0"]
 """
         with open(dockerfile_path, "w", encoding="utf-8") as f:
             f.write(dockerfile_content)

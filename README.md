@@ -32,7 +32,7 @@ Para garantizar la máxima velocidad de procesamiento en local y realizar prueba
    ```
 2. Ejecutar la consola interactiva de Streamlit:
    ```bash
-   streamlit run app.py
+   streamlit run app_streamlit.py
    ```
    La aplicación estará disponible inmediatamente en `http://localhost:8501`.
 
