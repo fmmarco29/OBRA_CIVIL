@@ -11,15 +11,14 @@ from src.digital_twin import DigitalTwinEngine
 from src.report_generator import LaTeXReportGenerator
 from src.github_automation import GitHubAutomation
 
-# Configuración de página con diseño responsive y moderno
+# Configuración de página con diseño responsive y corporativo
 st.set_page_config(
     page_title="CIVIL-TWIN | Fuerteventura Digital Twin",
-    page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilización premium con inyección de CSS estilo Glassmorphism y Dark Mode Tailored
+# Estilización premium con inyección de CSS estilo Glassmorphism y Dark Mode Tailored (Tono serio y formal)
 st.markdown(
     """
     <style>
@@ -174,13 +173,13 @@ st.sidebar.markdown(
     """
     <div style='text-align: center; margin-bottom: 20px;'>
         <h2 style='color: #60A5FA; font-weight: 800; margin-bottom: 0;'>CIVIL-TWIN</h2>
-        <span style='color: #94A3B8; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;'>Digital Twin Console</span>
+        <span style='color: #94A3B8; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;'>Consola Gemelo Digital</span>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-st.sidebar.markdown("### 📊 Diario de Obra (Seguimiento)")
+st.sidebar.markdown("### Diario de Obra (Seguimiento)")
 day_input = st.sidebar.number_input("Día de Control Actual", min_value=1, max_value=730, value=st.session_state.actual_day)
 progress_pct = st.sidebar.slider("Avance Físico Real (%)", min_value=0.0, max_value=100.0, value=st.session_state.actual_progress * 100.0, step=0.1)
 actual_cost_input = st.sidebar.number_input("Coste Real Incurrido (AC en €)", min_value=0.0, value=st.session_state.actual_cost, step=500000.0)
@@ -191,13 +190,13 @@ st.session_state.actual_progress = progress_pct / 100.0
 st.session_state.actual_cost = actual_cost_input
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🏔️ Parámetros del Frente de Túnel")
+st.sidebar.markdown("### Parámetros del Frente de Túnel")
 rmr_input = st.sidebar.slider("Calidad de Roca (RMR)", min_value=10, max_value=100, value=65)
 depth_input = st.sidebar.slider("Profundidad de Excavación (m)", min_value=10, max_value=500, value=120)
 water_input = st.sidebar.slider("Filtraciones de Agua (L/min)", min_value=0, max_value=150, value=15)
 
 st.sidebar.markdown("---")
-st.sidebar.info("🔒 **Seguridad Corporativa**: CIVIL-TWIN procesa y simula toda la información 100% de manera local en el navegador/servidor de la obra.")
+st.sidebar.info("Seguridad Corporativa: CIVIL-TWIN procesa y simula toda la información 100% de manera local en el navegador/servidor de la obra.")
 
 # ================= ENCABEZADO DE LA APLICACIÓN =================
 st.markdown(
@@ -234,19 +233,19 @@ alerts = twin_engine.get_alerts(metrics)
 for alert in alerts:
     alert_type = alert["type"]
     if alert_type == "CRITICAL":
-        st.markdown(f"<div class='alert-banner alert-critical'>⚠️ <b>[CRÍTICO]</b> {alert['message']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='alert-banner alert-critical'>[CRÍTICO] {alert['message']}</div>", unsafe_allow_html=True)
     elif alert_type == "WARNING":
-        st.markdown(f"<div class='alert-banner alert-warning'>🔔 <b>[ADVERTENCIA]</b> {alert['message']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='alert-banner alert-warning'>[ADVERTENCIA] {alert['message']}</div>", unsafe_allow_html=True)
     else:
-        st.markdown(f"<div class='alert-banner alert-success'>✅ <b>[RENDIMIENTO ÓPTIMO]</b> {alert['message']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='alert-banner alert-success'>[ESTABLE] {alert['message']}</div>", unsafe_allow_html=True)
 
 # Pestañas principales
 tab_dashboard, tab_document, tab_risk, tab_report, tab_saas = st.tabs([
-    "📈 Cuadro de Mando y Gemelo Digital", 
-    "📂 Ingestión Documental (NLP)", 
-    "🔮 Simulación Geotécnica e IA", 
-    "📄 LaTeX & Reportes Corporativos",
-    "☁️ Repositorio y Despliegue SaaS"
+    "Cuadro de Mando y Gemelo Digital", 
+    "Ingestión Documental (NLP)", 
+    "Simulación Geotécnica e IA", 
+    "LaTeX & Reportes Corporativos",
+    "Repositorio y Despliegue SaaS"
 ])
 
 # ================= TAB 1: CUADRO DE MANDO Y GEMELO DIGITAL =================
@@ -317,13 +316,12 @@ with tab_dashboard:
     col_chart, col_gantt = st.columns([3, 2])
     
     with col_chart:
-        st.markdown("### 📊 Curva S del Gemelo Digital (Línea Base vs. Real)")
+        st.markdown("### Curva S del Gemelo Digital (Línea Base vs. Real)")
         
         # Simular curvas acumuladas a lo largo de 730 días
         days = np.arange(1, 731, 10)
         pv_curve = []
         for d in days:
-            # Calcular PV para el día d
             val = 0.0
             for _, row in st.session_state.wbs_df.iterrows():
                 start = row["Start_Day"]
@@ -336,12 +334,10 @@ with tab_dashboard:
                     val += ((d - start + 1) / duration) * cost
             pv_curve.append(val)
             
-        # Curva de avance real acumulada hasta el día actual
         actual_days = [d for d in days if d <= st.session_state.actual_day]
         ac_curve = []
         ev_curve = []
         for i, d in enumerate(actual_days):
-            # Progresión suave de progreso real
             fraction = d / st.session_state.actual_day
             ac_curve.append(st.session_state.actual_cost * fraction)
             ev_curve.append(metrics["EV"] * fraction)
@@ -364,16 +360,13 @@ with tab_dashboard:
         st.plotly_chart(fig, use_container_width=True)
         
     with col_gantt:
-        st.markdown("### 📅 Cronograma Gantt de Actividades")
-        # Generar Gantt interactivo
+        st.markdown("### Cronograma Gantt de Actividades")
         df_gantt = st.session_state.wbs_df.copy()
-        
-        # Calcular fecha/día de fin de manera explícita
         df_gantt["End_Day"] = df_gantt["Start_Day"] + df_gantt["Duration"]
         
         fig_gantt = px.timeline(
             df_gantt, 
-            x_start=df_gantt["Start_Day"].astype(str), # Convertir a strings/num para simular barras
+            x_start=df_gantt["Start_Day"].astype(str),
             x_end=df_gantt["End_Day"].astype(str), 
             y="Task", 
             color="Duration",
@@ -394,24 +387,22 @@ with tab_dashboard:
 
 # ================= TAB 2: INGESTIÓN DOCUMENTAL (NLP) =================
 with tab_document:
-    st.markdown("### 📂 Ingestión de Documentos Técnicos y Gantt")
+    st.markdown("### Ingestión de Documentos Técnicos y Gantt")
     st.markdown("Sube pliegos de condiciones técnicas (PDF) o planificaciones Gantt (CSV) para estructurar el gemelo digital en tiempo real.")
     
     col_upload_pdf, col_upload_csv = st.columns(2)
     
     with col_upload_pdf:
-        st.markdown("#### 📄 Carga de Especificaciones Técnicas (PDF)")
+        st.markdown("#### Carga de Especificaciones Técnicas (PDF)")
         uploaded_pdf = st.file_uploader("Arrastra tu pliego técnico de carretera con túnel", type="pdf")
         if uploaded_pdf is not None:
             pdf_bytes = uploaded_pdf.read()
-            # Ingestión con NLP local
             with st.spinner("Procesando PDF con técnicas de NLP locales..."):
                 extracted_meta = doc_processor.parse_pdf(pdf_bytes)
                 st.session_state.metadata.update(extracted_meta)
-                st.success("✅ ¡PDF procesado e integrado exitosamente!")
+                st.success("PDF procesado e integrado exitosamente.")
                 
-        # Mostrar metadatos actuales del Gemelo
-        st.markdown("##### 🔍 Variables Extraídas por la IA Local")
+        st.markdown("##### Variables Extraídas por la IA Local")
         meta = st.session_state.metadata
         st.markdown(f"- **Presupuesto (BAC):** €{meta['budget']:,.2f}")
         st.markdown(f"- **Longitud de Túnel:** {meta['tunnel_length']} metros")
@@ -420,21 +411,21 @@ with tab_document:
         st.markdown(f"- **Filtro Freático:** {meta['water_table']}")
         
     with col_upload_csv:
-        st.markdown("#### 📅 Importar Cronograma Gantt (CSV)")
+        st.markdown("#### Importar Cronograma Gantt (CSV)")
         uploaded_csv = st.file_uploader("Carga tu archivo CSV de tareas Gantt", type="csv")
         if uploaded_csv is not None:
             csv_bytes = uploaded_csv.read()
             with st.spinner("Parseando estructura Gantt en local..."):
                 df_parsed = doc_processor.parse_gantt_csv(csv_bytes)
                 st.session_state.wbs_df = df_parsed
-                st.success("✅ Estructura Gantt importada con éxito.")
+                st.success("Estructura Gantt importada con éxito.")
                 
-        st.markdown("##### 🛠️ Estructura WBS de la Obra")
+        st.markdown("##### Estructura WBS de la Obra")
         st.dataframe(st.session_state.wbs_df, use_container_width=True)
 
 # ================= TAB 3: SIMULACIÓN GEOTÉCNICA E IA =================
 with tab_risk:
-    st.markdown("### 🔮 Motor de Simulación y Análisis Predictivo de Riesgos")
+    st.markdown("### Motor de Simulación y Análisis Predictivo de Riesgos")
     st.markdown(
         "Este módulo utiliza modelos de Machine Learning (Random Forest) entrenados con datasets de infraestructura reales "
         "y un simulador Monte Carlo para predecir escenarios probabilísticos de finalización."
@@ -443,12 +434,11 @@ with tab_risk:
     col_sim_params, col_sim_chart = st.columns([1, 2])
     
     with col_sim_params:
-        st.markdown("#### 🏔️ Diagnóstico del Frente de Excavación")
-        st.write("Ajusta los parámetros geofísicos detectados para calcular el riesgo instantáneo del frente:")
+        st.markdown("#### Diagnóstico del Frente de Excavación")
+        st.write("Ajusta los parámetros geofísicos detectados para calcular el riesgo del frente:")
         
-        # Mostrar el nivel de riesgo predicho por el modelo en tiempo real
         risk_model = GeotechnicalRiskModel()
-        risk_model.train() # Cargar/entrenar el clasificador local
+        risk_model.train()
         
         risk_class = risk_model.predict([[rmr_input, depth_input, water_input]])[0]
         risk_probs = risk_model.predict_proba([[rmr_input, depth_input, water_input]])[0]
@@ -473,13 +463,11 @@ with tab_risk:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Ejecutar Simulación Monte Carlo interactiva
-        st.markdown("#### ⚡ Simulación de Monte Carlo")
+        st.markdown("#### Simulación de Monte Carlo")
         sim_iterations = st.slider("Iteraciones", min_value=100, max_value=5000, value=2000, step=100)
-        run_sim = st.button("🚀 Iniciar Simulación Probabilística")
+        run_sim = st.button("Iniciar Simulación Probabilística")
         
     with col_sim_chart:
-        # Ejecutar Monte Carlo
         mc_simulator = MonteCarloSimulator()
         sim_results = mc_simulator.run_simulation(
             tasks_df=st.session_state.wbs_df, 
@@ -489,16 +477,14 @@ with tab_risk:
             iterations=sim_iterations
         )
         
-        st.markdown("#### 📈 Distribución Probabilística de Costes Finales")
+        st.markdown("#### Distribución Probabilística de Costes Finales")
         
-        # Graficar histograma de costes con Plotly
         fig_mc_cost = px.histogram(
             x=sim_results["costs"] / 1000000.0, 
             nbins=50, 
             color_discrete_sequence=['#3B82F6'],
             labels={"x": "Coste Final del Proyecto (Millones de Euros)", "y": "Frecuencia de Ocurrencias"}
         )
-        # Añadir líneas de percentiles
         fig_mc_cost.add_vline(x=sim_results["p10_cost"] / 1000000.0, line_dash="dash", line_color="#34D399", 
                               annotation_text=f"P10 (Optimista): €{sim_results['p10_cost']/1000000.0:.1f}M")
         fig_mc_cost.add_vline(x=sim_results["p50_cost"] / 1000000.0, line_color="#F59E0B", 
@@ -517,7 +503,6 @@ with tab_risk:
         )
         st.plotly_chart(fig_mc_cost, use_container_width=True)
         
-        # Resultados Resumidos
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
             st.metric("P10 Duración (Plazo Corto)", f"{sim_results['p10_duration']} días")
@@ -528,13 +513,12 @@ with tab_risk:
 
 # ================= TAB 4: LATEX & REPORTES CORPORATIVOS =================
 with tab_report:
-    st.markdown("### 📄 Informes Ejecutivos en LaTeX")
+    st.markdown("### Informes Ejecutivos en LaTeX")
     st.markdown(
         "CIVIL-TWIN automatiza la redacción técnica estructurada para la junta de dirección de obra. "
-        "El código es 100% estándar de LaTeX y puede copiarse directamente o compilarse en PDF."
+        "El código es 100% estándar de LaTeX y puede copiarse directamente o descargarse."
     )
     
-    # Generar LaTeX dinámico
     risk_results = {
         "p50_duration": sim_results["p50_duration"],
         "p90_duration": sim_results["p90_duration"],
@@ -549,9 +533,8 @@ with tab_report:
         risk_results=risk_results
     )
     
-    # Botón de Descarga
     st.download_button(
-        label="📥 Descargar Código LaTeX (.tex)",
+        label="Descargar Código LaTeX (.tex)",
         data=latex_code,
         file_name=f"informe_obra_dia_{st.session_state.actual_day}.tex",
         mime="text/plain"
@@ -560,12 +543,11 @@ with tab_report:
     col_code, col_preview = st.columns([1, 1])
     
     with col_code:
-        st.markdown("#### 💻 Editor / Código LaTeX Generado")
+        st.markdown("#### Editor / Código LaTeX Generado")
         edited_latex = st.text_area("Código fuente LaTeX listo para compilar", value=latex_code, height=450)
         
     with col_preview:
-        st.markdown("#### 👁️ Previsualización del Informe Estructurado")
-        # Mostrar estructura bonita en markdown simulando el PDF renderizado de LaTeX
+        st.markdown("#### Previsualización del Informe Estructurado")
         st.markdown(
             f"""
             <div style='background: white; color: #333; padding: 30px; border-radius: 12px; height: 450px; overflow-y: scroll; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1); font-family: serif;'>
@@ -608,50 +590,48 @@ with tab_report:
 
 # ================= TAB 5: REPOSITORIO Y DESPLIEGUE SAAS =================
 with tab_saas:
-    st.markdown("### ☁️ Gestión del Repositorio y Despliegue SaaS")
+    st.markdown("### Gestión del Repositorio y Despliegue SaaS")
     st.markdown(
         "CIVIL-TWIN permite automatizar la inicialización del repositorio Git local, configurar las "
-        "herramientas CI/CD e infraestructura en Docker, y proveer accesos instantáneos para pruebas en la nube."
+        "herramientas CI/CD y proveer accesos instantáneos para pruebas en la nube."
     )
     
     col_git, col_saas_link = st.columns(2)
     
     with col_git:
-        st.markdown("#### 🛠️ Inicializar Repositorio Git Local")
-        st.write("Genera y actualiza archivos de infraestructura (Dockerfile, docker-compose.yml, workflows de CI/CD de GitHub Actions, README.md):")
+        st.markdown("#### Inicializar Repositorio Git Local")
+        st.write("Genera y actualiza archivos de infraestructura (workflows de CI/CD de GitHub Actions, README.md, requirements.txt):")
         
-        if st.button("🔧 Generar e Inicializar Repositorio"):
+        if st.button("Generar e Inicializar Repositorio"):
             res = github_util.init_local_repo()
             if res:
-                st.success("✅ ¡Infraestructura de desarrollo inicializada y confirmada en Git!")
-                st.info("Archivos creados: README.md, Dockerfile, docker-compose.yml, .github/workflows/test.yml y requirements.txt")
+                st.success("Infraestructura de desarrollo inicializada y confirmada en Git.")
+                st.info("Archivos creados: README.md, .github/workflows/test.yml y requirements.txt")
             else:
-                st.error("❌ Error al inicializar Git.")
+                st.error("Error al inicializar Git.")
                 
-        # Consola de instrucciones
         instructions = github_util.prepare_saas_deployment()
-        st.markdown("##### 💻 Instrucciones para empujar a GitHub corporativo")
+        st.markdown("##### Instrucciones para empujar a GitHub corporativo")
         st.code(instructions["github_instructions"], language="bash")
         
     with col_saas_link:
-        st.markdown("#### 🚀 Acceso SaaS para el Gerente (Demo Cloud)")
+        st.markdown("#### Acceso SaaS para el Gerente (Demo Cloud)")
         st.write(
             "Para que el gerente pruebe de manera remota e interactiva el Gemelo Digital MVP sin necesidad "
             "de instalaciones complejas, CIVIL-TWIN está preparado para desplegarse mediante un solo enlace:"
         )
         
-        # Enlaces interactivos
         st.markdown(
             f"""
             <div style='background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 25px; border-radius: 12px; margin-top: 15px;'>
-                <h4 style='color: #60A5FA; margin-top:0;'>🔗 Enlace Demo SaaS Generado</h4>
+                <h4 style='color: #60A5FA; margin-top:0;'>Enlace Demo SaaS Generado</h4>
                 <p style='font-size: 0.9rem;'>Haz clic para simular la demo interactiva en la nube o configurar el despliegue automático:</p>
-                <a href='{instructions["streamlit_cloud_link"]}' target='_blank' style='display: inline-block; background: #2563EB; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right:10px;'>🚀 Streamlit Cloud Demo</a>
-                <a href='{instructions["huggingface_spaces_link"]}' target='_blank' style='display: inline-block; background: #4B5563; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;'>🤗 Hugging Face Spaces</a>
+                <a href='{instructions["streamlit_cloud_link"]}' target='_blank' style='display: inline-block; background: #2563EB; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right:10px;'>Streamlit Cloud Demo</a>
+                <a href='{instructions["huggingface_spaces_link"]}' target='_blank' style='display: inline-block; background: #4B5563; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;'>Hugging Face Spaces</a>
             </div>
             """,
             unsafe_allow_html=True
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        st.warning(f"🔒 {instructions['enterprise_safety']}")
+        st.warning(f"Seguridad: {instructions['enterprise_safety']}")

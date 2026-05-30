@@ -16,7 +16,7 @@ class GitHubAutomation:
         
         # 2. Generar README.md
         readme_path = os.path.join(self.repo_path, "README.md")
-        readme_content = """# CIVIL-TWIN 🏗️🛤️🚇
+        readme_content = """# CIVIL-TWIN
 > **Gemelo Digital y Control de Costes para Grandes Obras de Infraestructura**  
 *Caso de Estudio: Carretera Puerto del Rosario - Caldereta (Túnel Singulado de Fuerteventura, Presupuesto €200,000,000)*
 

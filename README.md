@@ -1,4 +1,4 @@
-# CIVIL-TWIN 🏗️🛤️🚇
+# CIVIL-TWIN
 > **Gemelo Digital y Control de Costes para Grandes Obras de Infraestructura**  
 *Caso de Estudio: Carretera Puerto del Rosario - Caldereta (Túnel Singulado de Fuerteventura, Presupuesto €200,000,000)*
 
