@@ -95,8 +95,9 @@ class MonteCarloSimulator:
 
     def run_simulation(self, tasks_df, rmr=60, water_influx=15, depth=80, iterations=2000):
         """
-        Ejecuta una simulación de Monte Carlo en base a la WBS cargada y parámetros de riesgo geotécnico.
-        Modifica la variabilidad de las tareas basándose en el riesgo geotécnico actual del túnel.
+        Ejecuta una simulación de Monte Carlo vectorizada en base a la WBS cargada y parámetros de riesgo geotécnico.
+        Modifica la variabilidad de las tareas basándose en el riesgo geotécnico del túnel.
+        Altamente optimizada utilizando operaciones vectoriales de NumPy.
         """
         np.random.seed(42)
         
@@ -104,8 +105,7 @@ class MonteCarloSimulator:
         risk_model = GeotechnicalRiskModel()
         risk_class = risk_model.predict([[rmr, depth, water_influx]])[0]
         
-        # Multiplicadores de riesgo en base a la severidad geotécnica
-        # Afectan especialmente a la tarea del túnel (Task_ID 4, 5 y 6)
+        # Multiplicadores de riesgo en base a la severidad geotécnica (túnel)
         risk_factor_cost = 1.0
         risk_factor_time = 1.0
         if risk_class == 1:    # Medio
@@ -115,65 +115,66 @@ class MonteCarloSimulator:
             risk_factor_cost = 1.40
             risk_factor_time = 1.55
 
-        simulated_durations = []
-        simulated_costs = []
+        # Diccionarios para almacenar las muestras aleatorias de duraciones y costes por Task_ID
+        sim_durations = {}
+        sim_costs = {}
+        task_end_days = {} # Almacena array de duraciones acumuladas por Task_ID para todas las iteraciones
 
-        for _ in range(iterations):
-            total_duration = 0
-            total_cost = 0.0
-            task_end_days = {} # Guardar día de finalización simulado por Task_ID para modelar dependencias
+        # Convertir a lista de registros para evitar el coste de iterrows de pandas en el bucle principal
+        tasks = tasks_df.to_dict('records')
 
-            for _, row in tasks_df.iterrows():
-                tid = row["Task_ID"]
-                duration_base = row["Duration"]
-                cost_base = row["Cost"]
-                predecessors = str(row["Predecessors"]).strip()
+        # 1. Generación vectorizada de muestras aleatorias triangulares (PERT)
+        for row in tasks:
+            tid = row["Task_ID"]
+            duration_base = row["Duration"]
+            cost_base = row["Cost"]
 
-                # Determinar multiplicadores individuales según el tipo de tarea
-                # El túnel (Task_ID 4, 5) es muy sensible a riesgos geotécnicos
-                if tid in [4, 5]:
-                    task_time_mult = risk_factor_time
-                    task_cost_mult = risk_factor_cost
-                else:
-                    task_time_mult = 1.05  # Menor influencia para carretera superficial
-                    task_cost_mult = 1.05
+            # Determinar multiplicadores individuales según el tipo de tarea (Túnel sensible a riesgos)
+            if tid in [4, 5]:
+                task_time_mult = risk_factor_time
+                task_cost_mult = risk_factor_cost
+            else:
+                task_time_mult = 1.05
+                task_cost_mult = 1.05
 
-                # Distribución triangular (PERT) para la tarea actual
-                # Tiempo: Optimista (a), Probable (m), Pesimista (b)
-                t_opt = duration_base * 0.90
-                t_prob = duration_base
-                t_pes = duration_base * (1.10 + (task_time_mult - 1.0) * 1.5)
-                
-                # Coste: Optimista (a), Probable (m), Pesimista (b)
-                c_opt = cost_base * 0.95
-                c_prob = cost_base
-                c_pes = cost_base * (1.05 + (task_cost_mult - 1.0) * 1.4)
+            # Límites PERT
+            t_opt = duration_base * 0.90
+            t_prob = duration_base
+            t_pes = duration_base * (1.10 + (task_time_mult - 1.0) * 1.5)
+            
+            c_opt = cost_base * 0.95
+            c_prob = cost_base
+            c_pes = cost_base * (1.05 + (task_cost_mult - 1.0) * 1.4)
 
-                sim_t = np.random.triangular(t_opt, t_prob, t_pes)
-                sim_c = np.random.triangular(c_opt, c_prob, c_pes)
+            # Muestreo vectorizado de NumPy (N muestras en una sola llamada de C nativo)
+            sim_durations[tid] = np.random.triangular(t_opt, t_prob, t_pes, size=iterations)
+            sim_costs[tid] = np.random.triangular(c_opt, c_prob, c_pes, size=iterations)
 
-                # Calcular día de inicio simulado en base a predecesores
-                start_day = 1
-                if predecessors and predecessors != "nan" and predecessors != "":
-                    pred_list = [int(x.strip()) for x in predecessors.split(",") if x.strip().isdigit()]
-                    if pred_list:
-                        # El inicio es el máximo final de sus predecesores
-                        start_day = max(task_end_days.get(p, 1) for p in pred_list) + 1
+        # 2. Resolución de la ruta crítica y fechas de finalización de forma vectorizada
+        for row in tasks:
+            tid = row["Task_ID"]
+            predecessors_str = str(row["Predecessors"]).strip()
 
-                end_day = start_day + sim_t
-                task_end_days[tid] = end_day
-                
-                total_cost += sim_c
+            # Calcular el día de inicio para las 'iterations' iteraciones de forma vectorizada
+            start_days = np.ones(iterations)
+            
+            if predecessors_str and predecessors_str != "nan" and predecessors_str != "":
+                pred_list = [int(x.strip()) for x in predecessors_str.split(",") if x.strip().isdigit()]
+                if pred_list:
+                    # Array elemental de NumPy conteniendo el máximo día final de predecesores iteración a iteración
+                    pred_ends = [task_end_days[p] for p in pred_list if p in task_end_days]
+                    if pred_ends:
+                        start_days = np.maximum.reduce(pred_ends) + 1
 
-            # La duración del proyecto es el día máximo de finalización de todas las tareas
-            project_duration = max(task_end_days.values())
-            simulated_durations.append(project_duration)
-            simulated_costs.append(total_cost)
+            # Calcular fin de la tarea vectorizado
+            task_end_days[tid] = start_days + sim_durations[tid]
 
-        simulated_durations = np.array(simulated_durations)
-        simulated_costs = np.array(simulated_costs)
+        # La duración del proyecto para cada iteración es el máximo de finalización de todas las tareas
+        simulated_durations = np.maximum.reduce(list(task_end_days.values()))
+        # El coste total para cada iteración es la suma de los costes simulados de todas las tareas
+        simulated_costs = np.sum(list(sim_costs.values()), axis=0)
 
-        # Estadísticas y cuantiles (P10, P50, P90)
+        # Estadísticas y cuantiles en base a los resultados simulados
         results = {
             "durations": simulated_durations,
             "costs": simulated_costs,
@@ -183,7 +184,8 @@ class MonteCarloSimulator:
             "p10_cost": float(np.percentile(simulated_costs, 10)),
             "p50_cost": float(np.percentile(simulated_costs, 50)),
             "p90_cost": float(np.percentile(simulated_costs, 90)),
-            "geotechnical_risk_level": risk_class  # 0: Bajo, 1: Medio, 2: Alto
+            "geotechnical_risk_level": risk_class
         }
 
         return results
+
