@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  civil-twin:
+    build: .
+    container_name: civil_twin_mvp
+    ports:
+      - "8501:8501"
+    restart: always
+    volumes:
+      - .:/app
+    environment:
+      - STREAMLIT_THEME_BASE=dark
