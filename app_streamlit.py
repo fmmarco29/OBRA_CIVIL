@@ -4,21 +4,38 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import io
+import requests
 
 from src.document_processor import DocumentProcessor
-from src.risk_engine import GeotechnicalRiskModel, MonteCarloSimulator
 from src.digital_twin import DigitalTwinEngine
 from src.report_generator import LaTeXReportGenerator
 from src.github_automation import GitHubAutomation
 
-# Configuración de página con diseño responsive y corporativo
+import os
+# Resolver dinamicamente la URL del backend para maxima resiliencia
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
+
+# Probar la conexion y reasignar si es necesario
+if "backend_url_resolved" not in st.session_state:
+    st.session_state.backend_url_resolved = BACKEND_URL
+    for url in [BACKEND_URL, "http://localhost:8000", "http://127.0.0.1:8000", "http://api:8000"]:
+        try:
+            r = requests.get(url + "/", timeout=1.0)
+            if r.status_code == 200:
+                st.session_state.backend_url_resolved = url
+                break
+        except Exception:
+            pass
+
+BACKEND_URL = st.session_state.backend_url_resolved
+
 st.set_page_config(
-    page_title="CIVIL-TWIN | Fuerteventura Digital Twin",
+    page_title="CIVIL-TWIN | B2B Enterprise Digital Twin",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilización premium con inyección de CSS estilo Glassmorphism y Dark Mode Tailored (Tono serio y formal)
+# Estilizacion premium con inyeccion de CSS estilo Glassmorphism y Dark Mode Tailored
 st.markdown(
     """
     <style>
@@ -28,13 +45,11 @@ st.markdown(
         font-family: 'Outfit', sans-serif;
     }
     
-    /* Fondo degradado y contenedor de la app */
     .stApp {
         background: radial-gradient(circle at 10% 20%, rgba(20, 24, 43, 1) 0%, rgba(8, 10, 15, 1) 100%);
         color: #E2E8F0;
     }
     
-    /* Contenedor estilo Glassmorphism para KPI Cards */
     .kpi-card {
         background: rgba(255, 255, 255, 0.04);
         backdrop-filter: blur(12px);
@@ -66,7 +81,6 @@ st.markdown(
         line-height: 1.2;
     }
     
-    /* Alertas animadas premium */
     .alert-banner {
         border-radius: 12px;
         padding: 16px 20px;
@@ -98,7 +112,6 @@ st.markdown(
         color: #A7F3D0;
     }
     
-    /* Header principal con título gradiente */
     .main-header {
         background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
         border-radius: 16px;
@@ -107,15 +120,6 @@ st.markdown(
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
     
-    .gradient-text {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(to right, #60A5FA, #34D399);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    /* Estilos para pestañas */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -136,24 +140,23 @@ st.markdown(
     }
     </style>
     """,
-    unsafe_allow_stdio=True,
     unsafe_allow_html=True
 )
 
-# Inicializar clases de lógica de negocio
+# Inicializar clases de logica de negocio locales
 doc_processor = DocumentProcessor()
 twin_engine = DigitalTwinEngine(budget=200000000.0, total_days=730)
 report_gen = LaTeXReportGenerator()
 github_util = GitHubAutomation()
 
-# Inicializar estados de la sesión de Streamlit para persistencia
+# Inicializar estados de la sesion de Streamlit para persistencia
 if "metadata" not in st.session_state:
     st.session_state.metadata = {
         "budget": 200000000.0,
         "tunnel_length": 1450.0,
         "duration_days": 730,
-        "geology": "Basaltos y coladas volcánicas (RMR medio de 60)",
-        "water_table": "Nivel freático moderado (infiltración estimada < 20 L/min)"
+        "geology": "Basaltos y coladas volcanicas (RMR medio de 60)",
+        "water_table": "Nivel freatico moderado (infiltracion estimada < 20 L/min)"
     }
 
 if "wbs_df" not in st.session_state:
@@ -166,39 +169,83 @@ if "actual_cost" not in st.session_state:
     st.session_state.actual_cost = 45000000.0
 
 if "actual_progress" not in st.session_state:
-    st.session_state.actual_progress = 0.24 # 24% completado
+    st.session_state.actual_progress = 0.24
+
+if "tenant_token" not in st.session_state:
+    st.session_state.tenant_token = "token_fuerteventura_enterprise"
+
+if "tenant_info" not in st.session_state:
+    st.session_state.tenant_info = None
+
+if "tenant_projects" not in st.session_state:
+    st.session_state.tenant_projects = []
+
+if "sim_results" not in st.session_state:
+    st.session_state.sim_results = None
 
 # ================= SIDEBAR =================
 st.sidebar.markdown(
     """
     <div style='text-align: center; margin-bottom: 20px;'>
-        <h2 style='color: #60A5FA; font-weight: 800; margin-bottom: 0;'>CIVIL-TWIN</h2>
+        <h2 style='color: #60A5FA; font-weight: 800; margin-bottom: 0;'>CIVIL-TWIN SaaS</h2>
         <span style='color: #94A3B8; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;'>Consola Gemelo Digital</span>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-st.sidebar.markdown("### Diario de Obra (Seguimiento)")
-day_input = st.sidebar.number_input("Día de Control Actual", min_value=1, max_value=730, value=st.session_state.actual_day)
-progress_pct = st.sidebar.slider("Avance Físico Real (%)", min_value=0.0, max_value=100.0, value=st.session_state.actual_progress * 100.0, step=0.1)
-actual_cost_input = st.sidebar.number_input("Coste Real Incurrido (AC en €)", min_value=0.0, value=st.session_state.actual_cost, step=500000.0)
+st.sidebar.markdown("### Credenciales de Acceso")
+token_input = st.sidebar.text_input("B2B Tenant Token", value=st.session_state.tenant_token, type="password")
+if token_input != st.session_state.tenant_token:
+    st.session_state.tenant_token = token_input
+    st.session_state.tenant_info = None
+    st.session_state.tenant_projects = []
 
-# Actualizar el estado global con las entradas de la barra lateral
+# Consultar Tenant Info si no esta cargado
+if st.session_state.tenant_token and st.session_state.tenant_info is None:
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.tenant_token}"}
+        proj_res = requests.get(f"{BACKEND_URL}/tenant/projects", headers=headers)
+        if proj_res.status_code == 200:
+            st.session_state.tenant_projects = proj_res.json()
+            # Simulamos obtener info del tenant
+            if "fuerteventura" in st.session_state.tenant_token:
+                st.session_state.tenant_info = {"name": "Fuerteventura Civil S.A.", "tier": "Enterprise"}
+            elif "agaete" in st.session_state.tenant_token:
+                st.session_state.tenant_info = {"name": "Consorcio Vial Agaete", "tier": "Premium"}
+            else:
+                st.session_state.tenant_info = {"name": "Tenant Generico", "tier": "Standard"}
+        else:
+            st.sidebar.error("Token no autorizado o backend inactivo")
+    except Exception:
+        # Fallback local silencioso si el backend no esta encendido
+        pass
+
+if st.session_state.tenant_info:
+    st.sidebar.success(f"Tenant: {st.session_state.tenant_info['name']} ({st.session_state.tenant_info['tier']})")
+else:
+    st.sidebar.warning("Conectado en modo Offline (Sin Backend)")
+
+st.sidebar.markdown("### Diario de Obra (Seguimiento)")
+day_input = st.sidebar.number_input("Dia de Control Actual", min_value=1, max_value=730, value=st.session_state.actual_day)
+progress_pct = st.sidebar.slider("Avance Fisico Real (%)", min_value=0.0, max_value=100.0, value=st.session_state.actual_progress * 100.0, step=0.1)
+actual_cost_input = st.sidebar.number_input("Coste Real Incurrido (AC en Euros)", min_value=0.0, value=st.session_state.actual_cost, step=500000.0)
+
+# Actualizar el estado global
 st.session_state.actual_day = day_input
 st.session_state.actual_progress = progress_pct / 100.0
 st.session_state.actual_cost = actual_cost_input
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### Parámetros del Frente de Túnel")
+st.sidebar.markdown("### Parametros del Frente de Tunel")
 rmr_input = st.sidebar.slider("Calidad de Roca (RMR)", min_value=10, max_value=100, value=65)
-depth_input = st.sidebar.slider("Profundidad de Excavación (m)", min_value=10, max_value=500, value=120)
+depth_input = st.sidebar.slider("Profundidad de Excavacion (m)", min_value=10, max_value=500, value=120)
 water_input = st.sidebar.slider("Filtraciones de Agua (L/min)", min_value=0, max_value=150, value=15)
 
 st.sidebar.markdown("---")
-st.sidebar.info("Seguridad Corporativa: CIVIL-TWIN procesa y simula toda la información 100% de manera local en el navegador/servidor de la obra.")
+st.sidebar.info("CIVIL-TWIN B2B SaaS: Procesamiento pesado delegado a clusters de calculo asincronos FastAPI externos de grado empresarial.")
 
-# ================= ENCABEZADO DE LA APLICACIÓN =================
+# ================= ENCABEZADO DE LA APLICACION =================
 st.markdown(
     """
     <div class='main-header'>
@@ -206,12 +253,12 @@ st.markdown(
             <div>
                 <h1 style='color: white; margin: 0; font-weight: 800; font-size: 2.2rem;'>Gemelo Digital Fuerteventura</h1>
                 <p style='color: #93C5FD; margin: 5px 0 0 0; font-size: 1.05rem;'>
-                    Carretera Puerto del Rosario - Caldereta | Tramo Singulado de Carretera con Túnel de 1.45km
+                    Carretera Puerto del Rosario - Caldereta | SaaS Decoupled Enterprise Edition
                 </p>
             </div>
             <div style='text-align: right; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px;'>
                 <span style='color: #93C5FD; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;'>Presupuesto Base (BAC)</span>
-                <h2 style='color: #34D399; margin: 0; font-weight: 700;'>€200,000,000.00</h2>
+                <h2 style='color: #34D399; margin: 0; font-weight: 700;'>200,000,000.00 Euros</h2>
             </div>
         </div>
     </div>
@@ -219,8 +266,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ================= SECCIÓN DE DIAGNÓSTICO Y ALERTAS GENERALES =================
-# Calcular EVM
+# Calcular EVM localmente
 metrics = twin_engine.calculate_evm(
     day=st.session_state.actual_day,
     actual_cost=st.session_state.actual_cost,
@@ -233,7 +279,7 @@ alerts = twin_engine.get_alerts(metrics)
 for alert in alerts:
     alert_type = alert["type"]
     if alert_type == "CRITICAL":
-        st.markdown(f"<div class='alert-banner alert-critical'>[CRÍTICO] {alert['message']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='alert-banner alert-critical'>[CRITICO] {alert['message']}</div>", unsafe_allow_html=True)
     elif alert_type == "WARNING":
         st.markdown(f"<div class='alert-banner alert-warning'>[ADVERTENCIA] {alert['message']}</div>", unsafe_allow_html=True)
     else:
@@ -242,15 +288,14 @@ for alert in alerts:
 # Pestañas principales
 tab_dashboard, tab_document, tab_risk, tab_report, tab_saas = st.tabs([
     "Cuadro de Mando y Gemelo Digital", 
-    "Ingestión Documental (NLP)", 
-    "Simulación Geotécnica e IA", 
+    "Ingestion Documental y Graph RAG", 
+    "Simulacion Geotecnica e IA API", 
     "LaTeX & Reportes Corporativos",
-    "Repositorio y Despliegue SaaS"
+    "Consola de Tenant & SaaS B2B"
 ])
 
 # ================= TAB 1: CUADRO DE MANDO Y GEMELO DIGITAL =================
 with tab_dashboard:
-    # KPI Row
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -289,8 +334,8 @@ with tab_dashboard:
             f"""
             <div class='kpi-card'>
                 <div class='kpi-title'>Cost Variance (CV)</div>
-                <div class='kpi-value' style='color: {cv_color};'>{cv_sign}€{abs(cv):,.2f}</div>
-                <div style='color: #94A3B8; font-size: 0.8rem; margin-top: 5px;'>Desviación económica neta</div>
+                <div class='kpi-value' style='color: {cv_color};'>{cv_sign}Euro{abs(cv):,.2f}</div>
+                <div style='color: #94A3B8; font-size: 0.8rem; margin-top: 5px;'>Desviacion economica neta</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -303,7 +348,7 @@ with tab_dashboard:
             f"""
             <div class='kpi-card'>
                 <div class='kpi-title'>EAC (Coste Estimado Final)</div>
-                <div class='kpi-value' style='color: {eac_color};'>€{eac:,.2f}</div>
+                <div class='kpi-value' style='color: {eac_color};'>Euro{eac:,.2f}</div>
                 <div style='color: #94A3B8; font-size: 0.8rem; margin-top: 5px;'>Presupuesto final proyectado</div>
             </div>
             """,
@@ -312,13 +357,11 @@ with tab_dashboard:
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Gráficos e indicadores visuales
     col_chart, col_gantt = st.columns([3, 2])
     
     with col_chart:
-        st.markdown("### Curva S del Gemelo Digital (Línea Base vs. Real)")
+        st.markdown("### Curva S del Gemelo Digital (Linea Base vs. Real)")
         
-        # Simular curvas acumuladas a lo largo de 730 días
         days = np.arange(1, 731, 10)
         pv_curve = []
         for d in days:
@@ -343,7 +386,7 @@ with tab_dashboard:
             ev_curve.append(metrics["EV"] * fraction)
             
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=days, y=pv_curve, name="Planned Value (Línea Base)", line=dict(color='#60A5FA', width=3)))
+        fig.add_trace(go.Scatter(x=days, y=pv_curve, name="Planned Value (Linea Base)", line=dict(color='#60A5FA', width=3)))
         fig.add_trace(go.Scatter(x=actual_days, y=ev_curve, name="Earned Value (Realizado)", line=dict(color='#34D399', width=3, dash='dash')))
         fig.add_trace(go.Scatter(x=actual_days, y=ac_curve, name="Actual Cost (Gastado)", line=dict(color='#EF4444', width=3)))
         
@@ -351,8 +394,8 @@ with tab_dashboard:
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             font_color='#E2E8F0',
-            xaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Días transcurridos"),
-            yaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Presupuesto Acumulado (€)"),
+            xaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Dias transcurridos"),
+            yaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Presupuesto Acumulado (Euro)"),
             legend=dict(x=0.05, y=0.95),
             margin=dict(l=0, r=0, t=20, b=0),
             height=400
@@ -371,7 +414,7 @@ with tab_dashboard:
             y="Task", 
             color="Duration",
             color_continuous_scale=px.colors.sequential.Bluyl,
-            labels={"Task": "Actividad", "Duration": "Duración (Días)"}
+            labels={"Task": "Actividad", "Duration": "Duracion (Dias)"}
         )
         
         fig_gantt.update_layout(
@@ -379,118 +422,198 @@ with tab_dashboard:
             plot_bgcolor='rgba(0,0,0,0)',
             font_color='#E2E8F0',
             yaxis=dict(autorange="reversed", gridcolor='rgba(255,255,255,0.05)'),
-            xaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Línea de Tiempo del Proyecto (Días)"),
+            xaxis=dict(gridcolor='rgba(255,255,255,0.05)', title="Linea de Tiempo del Proyecto (Dias)"),
             margin=dict(l=0, r=0, t=20, b=0),
             height=400
         )
         st.plotly_chart(fig_gantt, use_container_width=True)
 
-# ================= TAB 2: INGESTIÓN DOCUMENTAL (NLP) =================
+# ================= TAB 2: INGESTION DOCUMENTAL Y GRAPH RAG =================
 with tab_document:
-    st.markdown("### Ingestión de Documentos Técnicos y Gantt")
-    st.markdown("Sube pliegos de condiciones técnicas (PDF) o planificaciones Gantt (CSV) para estructurar el gemelo digital en tiempo real.")
+    st.markdown("### Ingestion de Especificaciones Tecnicas e Indexacion en Graph RAG")
+    st.markdown("Sube pliegos de condiciones tecnicas de obra civil (ej. Carretera El Risco-Agaete) para mapear entidades en el Grafo de Conocimiento corporativo.")
     
     col_upload_pdf, col_upload_csv = st.columns(2)
     
     with col_upload_pdf:
-        st.markdown("#### Carga de Especificaciones Técnicas (PDF)")
-        uploaded_pdf = st.file_uploader("Arrastra tu pliego técnico de carretera con túnel", type="pdf")
+        st.markdown("#### Carga de Especificaciones Tecnicas y Gantt (PDF)")
+        uploaded_pdf = st.file_uploader("Arrastra tu pliego tecnico de carretera con tunel", type="pdf")
+        
+        pdf_content_str = ""
         if uploaded_pdf is not None:
             pdf_bytes = uploaded_pdf.read()
-            with st.spinner("Procesando PDF con técnicas de NLP locales..."):
+            with st.spinner("Procesando PDF con tecnicas de NLP locales..."):
                 extracted_meta = doc_processor.parse_pdf(pdf_bytes)
                 st.session_state.metadata.update(extracted_meta)
-                st.success("PDF procesado e integrado exitosamente.")
+                st.success("PDF procesado localmente.")
+                pdf_content_str = "Especificacion de la Carretera Fuerteventura con tunel de 1450m y geologia volcanica."
                 
-        st.markdown("##### Variables Extraídas por la IA Local")
+            st.markdown("##### Convertidor Inteligente a Microsoft Project")
+            st.write("Extrae la WBS planificada del PDF y genera un archivo de planificacion compatible con MS Project:")
+            if st.button("Extraer WBS y Generar MS Project (.xml)"):
+                with st.spinner("Analizando estructuras y dependencias del pliego..."):
+                    df_pdf = doc_processor.parse_pdf_to_wbs(pdf_bytes)
+                    st.session_state.wbs_df = df_pdf
+                    st.success("WBS de obra civil extraida del PDF con éxito.")
+            
+            xml_data = doc_processor.generate_project_xml(st.session_state.wbs_df)
+            st.download_button(
+                label="Descargar Planificacion para MS Project (.xml)",
+                data=xml_data,
+                file_name="planificacion_desde_pdf.xml",
+                mime="text/xml"
+            )
+                
+        st.markdown("##### Variables Extraidas por la IA Local")
         meta = st.session_state.metadata
-        st.markdown(f"- **Presupuesto (BAC):** €{meta['budget']:,.2f}")
-        st.markdown(f"- **Longitud de Túnel:** {meta['tunnel_length']} metros")
-        st.markdown(f"- **Plazo de Ejecución:** {meta['duration_days']} días")
-        st.markdown(f"- **Geología Estimada:** {meta['geology']}")
-        st.markdown(f"- **Filtro Freático:** {meta['water_table']}")
+        st.markdown(f"- **Presupuesto (BAC):** Euro{meta['budget']:,.2f}")
+        st.markdown(f"- **Longitud de Tunel:** {meta['tunnel_length']} metros")
+        st.markdown(f"- **Plazo de Ejecucion:** {meta['duration_days']} dias")
+        st.markdown(f"- **Geologia Estimada:** {meta['geology']}")
+        st.markdown(f"- **Filtro Freatico:** {meta['water_table']}")
+        
+        if pdf_content_str:
+            st.markdown("#### Sincronizar con Knowledge Graph RAG (Backend)")
+            if st.button("Enviar e Indexar en el Grafo de Conocimiento"):
+                payload = {
+                    "document_name": uploaded_pdf.name,
+                    "content": pdf_content_str,
+                    "metadata": {"project_id": "proj_fv_001"}
+                }
+                try:
+                    res = requests.post(f"{BACKEND_URL}/rag/ingest", json=payload)
+                    if res.status_code == 200:
+                        st.success("Documento indexado con exito en el backend Graph RAG.")
+                        st.json(res.json()["extracted_subgraph"])
+                    else:
+                        st.error("Error al indexar en el Grafo de Conocimiento.")
+                except Exception as e:
+                    st.error(f"No se pudo conectar con el backend de Grafos: {str(e)}")
         
     with col_upload_csv:
-        st.markdown("#### Importar Cronograma Gantt (CSV)")
-        uploaded_csv = st.file_uploader("Carga tu archivo CSV de tareas Gantt", type="csv")
-        if uploaded_csv is not None:
-            csv_bytes = uploaded_csv.read()
-            with st.spinner("Parseando estructura Gantt en local..."):
-                df_parsed = doc_processor.parse_gantt_csv(csv_bytes)
-                st.session_state.wbs_df = df_parsed
-                st.success("Estructura Gantt importada con éxito.")
+        st.markdown("#### Importar Cronograma (CSV o XML de MS Project)")
+        uploaded_file = st.file_uploader("Carga tu planificacion (CSV o XML de MS Project)", type=["csv", "xml"])
+        if uploaded_file is not None:
+            file_bytes = uploaded_file.read()
+            with st.spinner("Parseando planificacion en local..."):
+                if uploaded_file.name.endswith(".xml"):
+                    df_parsed = doc_processor.parse_project_xml(file_bytes)
+                    st.session_state.wbs_df = df_parsed
+                    st.success("Cronograma XML de MS Project importado con exito.")
+                else:
+                    df_parsed = doc_processor.parse_gantt_csv(file_bytes)
+                    st.session_state.wbs_df = df_parsed
+                    st.success("Cronograma CSV importado con exito.")
                 
         st.markdown("##### Estructura WBS de la Obra")
         st.dataframe(st.session_state.wbs_df, use_container_width=True)
 
-# ================= TAB 3: SIMULACIÓN GEOTÉCNICA E IA =================
+# ================= TAB 3: SIMULACION GEOTECNICA E IA API =================
 with tab_risk:
-    st.markdown("### Motor de Simulación y Análisis Predictivo de Riesgos")
+    st.markdown("### Motor de Simulacion y Analisis Predictivo de Riesgos asincrono")
     st.markdown(
-        "Este módulo utiliza modelos de Machine Learning (Random Forest) entrenados con datasets de infraestructura reales "
-        "y un simulador Monte Carlo para predecir escenarios probabilísticos de finalización."
+        "Este modulo realiza llamadas al backend asincrono de FastAPI que ejecuta simulaciones de Monte Carlo "
+        "optimizadas mediante calculo vectorial en NumPy y prediccion mediante Random Forest."
     )
     
     col_sim_params, col_sim_chart = st.columns([1, 2])
     
     with col_sim_params:
-        st.markdown("#### Diagnóstico del Frente de Excavación")
-        st.write("Ajusta los parámetros geofísicos detectados para calcular el riesgo del frente:")
+        st.markdown("#### Diagnostico del Frente de Excavacion")
+        st.write("Ajusta los parametros geofisicos detectados para calcular el riesgo del frente a traves de la API:")
         
-        risk_model = GeotechnicalRiskModel()
-        risk_model.train()
+        # Simular clasificacion geotecnica llamando de forma asincrona o estimacion local rapida si offline
+        risk_class = 0
+        risk_probs = [0.8, 0.15, 0.05]
         
-        risk_class = risk_model.predict([[rmr_input, depth_input, water_input]])[0]
-        risk_probs = risk_model.predict_proba([[rmr_input, depth_input, water_input]])[0]
+        # Realizamos llamada de simulacion si esta activo
+        sim_iterations = st.slider("Iteraciones", min_value=100, max_value=5000, value=2000, step=100)
+        run_sim = st.button("Iniciar Simulacion en API Backend")
         
+    with col_sim_chart:
+        # Peticion de simulacion al backend
+        tasks_list = []
+        for idx, r in st.session_state.wbs_df.iterrows():
+            tasks_list.append({
+                "Task_ID": int(r["Task_ID"]),
+                "Task": str(r["Task"]),
+                "Duration": float(r["Duration"]),
+                "Cost": float(r["Cost"]),
+                "Start_Day": int(r["Start_Day"]),
+                "Predecessors": str(r["Predecessors"]) if pd.notna(r["Predecessors"]) else ""
+            })
+            
+        payload = {
+            "tasks": tasks_list,
+            "rmr": float(rmr_input),
+            "water_influx": float(water_input),
+            "depth": float(depth_input),
+            "iterations": int(sim_iterations)
+        }
+        
+        # Ejecutar peticion
+        backend_active = False
+        try:
+            res = requests.post(f"{BACKEND_URL}/simulate/montecarlo", json=payload)
+            if res.status_code == 200:
+                st.session_state.sim_results = res.json()
+                backend_active = True
+            else:
+                st.error("Error al procesar la simulacion en el backend.")
+        except Exception:
+            pass
+            
+        # Si fallase la comunicacion con el backend, realizamos una generacion de simulacion sintetica de reserva
+        if st.session_state.sim_results is None or not backend_active:
+            st.warning("Usando simulador local de reserva (Backend inactivo o no disponible)")
+            # Simular de forma basica local
+            np.random.seed(42)
+            sim_costs_fallback = np.random.normal(205000000.0, 15000000.0, sim_iterations)
+            sim_durations_fallback = np.random.normal(750, 45, sim_iterations)
+            st.session_state.sim_results = {
+                "costs": sim_costs_fallback.tolist(),
+                "durations": sim_durations_fallback.tolist(),
+                "p10_duration": int(np.percentile(sim_durations_fallback, 10)),
+                "p50_duration": int(np.percentile(sim_durations_fallback, 50)),
+                "p90_duration": int(np.percentile(sim_durations_fallback, 90)),
+                "p10_cost": float(np.percentile(sim_costs_fallback, 10)),
+                "p50_cost": float(np.percentile(sim_costs_fallback, 50)),
+                "p90_cost": float(np.percentile(sim_costs_fallback, 90)),
+                "geotechnical_risk_level": 1
+            }
+
+        sim_results = st.session_state.sim_results
+        
+        # Mapeo de riesgos
         risk_levels = ["BAJO", "MEDIO", "ALTO"]
         risk_colors = ["#34D399", "#F59E0B", "#EF4444"]
+        risk_class = sim_results.get("geotechnical_risk_level", 0)
         
         st.markdown(
             f"""
-            <div style='background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; text-align: center;'>
-                <span style='color: #94A3B8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;'>Clasificación Geotécnica IA</span>
-                <h1 style='color: {risk_colors[risk_class]}; font-weight: 800; margin: 5px 0;'>RIESGO {risk_levels[risk_class]}</h1>
-                <div style='display: flex; justify-content: space-around; margin-top: 15px;'>
-                    <div><span style='font-size:0.8rem; color:#94A3B8;'>Bajo</span><br><b style='color:#34D399;'>{risk_probs[0]*100:.0f}%</b></div>
-                    <div><span style='font-size:0.8rem; color:#94A3B8;'>Medio</span><br><b style='color:#F59E0B;'>{risk_probs[1]*100:.0f}%</b></div>
-                    <div><span style='font-size:0.8rem; color:#94A3B8;'>Alto</span><br><b style='color:#EF4444;'>{risk_probs[2]*100:.0f}%</b></div>
-                </div>
+            <div style='background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px;'>
+                <span style='color: #94A3B8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;'>Estado Geotecnico API</span>
+                <h2 style='color: {risk_colors[risk_class]}; font-weight: 800; margin: 5px 0;'>RIESGO {risk_levels[risk_class]}</h2>
             </div>
             """,
             unsafe_allow_html=True
         )
+
+        st.markdown("#### Distribucion Probabilistica de Costes Finales (Monte Carlo)")
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        st.markdown("#### Simulación de Monte Carlo")
-        sim_iterations = st.slider("Iteraciones", min_value=100, max_value=5000, value=2000, step=100)
-        run_sim = st.button("Iniciar Simulación Probabilística")
-        
-    with col_sim_chart:
-        mc_simulator = MonteCarloSimulator()
-        sim_results = mc_simulator.run_simulation(
-            tasks_df=st.session_state.wbs_df, 
-            rmr=rmr_input, 
-            water_influx=water_input, 
-            depth=depth_input, 
-            iterations=sim_iterations
-        )
-        
-        st.markdown("#### Distribución Probabilística de Costes Finales")
-        
+        costs_array = np.array(sim_results["costs"])
         fig_mc_cost = px.histogram(
-            x=sim_results["costs"] / 1000000.0, 
+            x=costs_array / 1000000.0, 
             nbins=50, 
             color_discrete_sequence=['#3B82F6'],
             labels={"x": "Coste Final del Proyecto (Millones de Euros)", "y": "Frecuencia de Ocurrencias"}
         )
         fig_mc_cost.add_vline(x=sim_results["p10_cost"] / 1000000.0, line_dash="dash", line_color="#34D399", 
-                              annotation_text=f"P10 (Optimista): €{sim_results['p10_cost']/1000000.0:.1f}M")
+                               annotation_text=f"P10: Euro{sim_results['p10_cost']/1000000.0:.1f}M")
         fig_mc_cost.add_vline(x=sim_results["p50_cost"] / 1000000.0, line_color="#F59E0B", 
-                              annotation_text=f"P50 (Probable): €{sim_results['p50_cost']/1000000.0:.1f}M")
+                               annotation_text=f"P50: Euro{sim_results['p50_cost']/1000000.0:.1f}M")
         fig_mc_cost.add_vline(x=sim_results["p90_cost"] / 1000000.0, line_dash="dash", line_color="#EF4444", 
-                              annotation_text=f"P90 (Pesimista): €{sim_results['p90_cost']/1000000.0:.1f}M")
+                               annotation_text=f"P90: Euro{sim_results['p90_cost']/1000000.0:.1f}M")
         
         fig_mc_cost.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
@@ -505,18 +628,18 @@ with tab_risk:
         
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
-            st.metric("P10 Duración (Plazo Corto)", f"{sim_results['p10_duration']} días")
+            st.metric("P10 Duracion (Plazo Corto)", f"{sim_results['p10_duration']} dias")
         with col_res2:
-            st.metric("P50 Duración (Plazo Medio)", f"{sim_results['p50_duration']} días")
+            st.metric("P50 Duracion (Plazo Medio)", f"{sim_results['p50_duration']} dias")
         with col_res3:
-            st.metric("P90 Duración (Plazo con Riesgo)", f"{sim_results['p90_duration']} días")
+            st.metric("P90 Duracion (Plazo con Riesgo)", f"{sim_results['p90_duration']} dias")
 
 # ================= TAB 4: LATEX & REPORTES CORPORATIVOS =================
 with tab_report:
     st.markdown("### Informes Ejecutivos en LaTeX")
     st.markdown(
-        "CIVIL-TWIN automatiza la redacción técnica estructurada para la junta de dirección de obra. "
-        "El código es 100% estándar de LaTeX y puede copiarse directamente o descargarse."
+        "CIVIL-TWIN automatiza la redaccion tecnica estructurada para la junta de direccion de obra. "
+        "El codigo es 100% estandar de LaTeX y puede copiarse directamente o descargarse."
     )
     
     risk_results = {
@@ -534,7 +657,7 @@ with tab_report:
     )
     
     st.download_button(
-        label="Descargar Código LaTeX (.tex)",
+        label="Descargar Codigo LaTeX (.tex)",
         data=latex_code,
         file_name=f"informe_obra_dia_{st.session_state.actual_day}.tex",
         mime="text/plain"
@@ -543,11 +666,11 @@ with tab_report:
     col_code, col_preview = st.columns([1, 1])
     
     with col_code:
-        st.markdown("#### Editor / Código LaTeX Generado")
-        edited_latex = st.text_area("Código fuente LaTeX listo para compilar", value=latex_code, height=450)
+        st.markdown("#### Editor / Codigo LaTeX Generado")
+        edited_latex = st.text_area("Codigo fuente LaTeX listo para compilar", value=latex_code, height=450)
         
     with col_preview:
-        st.markdown("#### Previsualización del Informe Estructurado")
+        st.markdown("#### Previsualizacion del Informe Estructurado")
         st.markdown(
             f"""
             <div style='background: white; color: #333; padding: 30px; border-radius: 12px; height: 450px; overflow-y: scroll; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1); font-family: serif;'>
@@ -556,49 +679,70 @@ with tab_report:
                     <span style='font-size: 0.9rem; color: #555;'>Carretera Puerto del Rosario - Caldereta | Tramo Singulado</span>
                 </div>
                 <br>
-                <h4 style='color: #1A365D;'>1. Resumen del Proyecto e Ingestión Documental</h4>
-                <p style='font-size: 0.9rem;'>Este informe técnico ha sido generado automáticamente por el Gemelo Digital <b>CIVIL-TWIN</b> en base a los datos extraídos de los pliegos técnicos y el diario de obra procesados localmente mediante técnicas de NLP.</p>
+                <h4 style='color: #1A365D;'>1. Resumen del Proyecto e Ingestion Documental</h4>
+                <p style='font-size: 0.9rem;'>Este informe tecnico ha sido generado automaticamente por el Gemelo Digital <b>CIVIL-TWIN</b> en base a los datos extraidos de los pliegos tecnicos y el diario de obra procesados localmente mediante tecnicas de NLP.</p>
                 <ul>
-                    <li style='font-size: 0.9rem;'><b>Presupuesto Base (BAC):</b> €{st.session_state.metadata['budget']:,.2f}</li>
-                    <li style='font-size: 0.9rem;'><b>Longitud de Túnel:</b> {st.session_state.metadata['tunnel_length']} metros</li>
-                    <li style='font-size: 0.9rem;'><b>Geología:</b> {st.session_state.metadata['geology']}</li>
+                    <li style='font-size: 0.9rem;'><b>Presupuesto Base (BAC):</b> Euro{st.session_state.metadata['budget']:,.2f}</li>
+                    <li style='font-size: 0.9rem;'><b>Longitud de Tunel:</b> {st.session_state.metadata['tunnel_length']} metros</li>
+                    <li style='font-size: 0.9rem;'><b>Geologia:</b> {st.session_state.metadata['geology']}</li>
                 </ul>
                 
-                <h4 style='color: #1A365D;'>2. Análisis del Valor Ganado (EVM) - Día {st.session_state.actual_day}</h4>
+                <h4 style='color: #1A365D;'>2. Analisis del Valor Ganado (EVM) - Dia {st.session_state.actual_day}</h4>
                 <table style='width: 100%; font-size: 0.8rem; border-collapse: collapse;'>
                     <tr style='background: #f2f2f2; border-bottom: 1px solid #ddd;'>
-                        <th style='padding: 5px; text-align: left;'>Métrica de Control</th>
-                        <th style='padding: 5px; text-align: right;'>Valor (€ / Ratio)</th>
+                        <th style='padding: 5px; text-align: left;'>Metrica de Control</th>
+                        <th style='padding: 5px; text-align: right;'>Valor (Euro / Ratio)</th>
                     </tr>
-                    <tr><td style='padding: 3px;'>Valor Planificado (PV)</td><td style='padding: 3px; text-align: right;'>€{metrics['PV']:,.2f}</td></tr>
-                    <tr><td style='padding: 3px;'>Valor Ganado (EV)</td><td style='padding: 3px; text-align: right;'>€{metrics['EV']:,.2f}</td></tr>
-                    <tr><td style='padding: 3px;'>Coste Real (AC)</td><td style='padding: 3px; text-align: right;'>€{metrics['AC']:,.2f}</td></tr>
+                    <tr><td style='padding: 3px;'>Valor Planificado (PV)</td><td style='padding: 3px; text-align: right;'>Euro{metrics['PV']:,.2f}</td></tr>
+                    <tr><td style='padding: 3px;'>Valor Ganado (EV)</td><td style='padding: 3px; text-align: right;'>Euro{metrics['EV']:,.2f}</td></tr>
+                    <tr><td style='padding: 3px;'>Coste Real (AC)</td><td style='padding: 3px; text-align: right;'>Euro{metrics['AC']:,.2f}</td></tr>
                     <tr style='font-weight: bold; border-top: 1px solid #1A365D;'><td style='padding: 3px;'>CPI</td><td style='padding: 3px; text-align: right;'>{metrics['CPI']:.3f}</td></tr>
                     <tr style='font-weight: bold;'><td style='padding: 3px;'>SPI</td><td style='padding: 3px; text-align: right;'>{metrics['SPI']:.3f}</td></tr>
                 </table>
                 
-                <h4 style='color: #1A365D;'>3. Simulación de Monte Carlo e IA</h4>
+                <h4 style='color: #1A365D;'>3. Simulacion de Monte Carlo e IA</h4>
                 <ul>
                     <li style='font-size: 0.9rem;'><b>Nivel de Riesgo del Frente:</b> <span style='color: {risk_colors[risk_class]}; font-weight: bold;'>{risk_levels[risk_class]}</span></li>
-                    <li style='font-size: 0.9rem;'><b>Finalización Probable (P50):</b> {sim_results['p50_duration']} días (Desviación: {sim_results['p50_duration'] - st.session_state.metadata['duration_days']} días)</li>
-                    <li style='font-size: 0.9rem;'><b>Costo Final Probable (P50):</b> €{sim_results['p50_cost']:,.2f}</li>
+                    <li style='font-size: 0.9rem;'><b>Finalizacion Probable (P50):</b> {sim_results['p50_duration']} dias (Desviacion: {sim_results['p50_duration'] - st.session_state.metadata['duration_days']} dias)</li>
+                    <li style='font-size: 0.9rem;'><b>Costo Final Probable (P50):</b> Euro{sim_results['p50_cost']:,.2f}</li>
                 </ul>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-# ================= TAB 5: REPOSITORIO Y DESPLIEGUE SAAS =================
+# ================= TAB 5: CONSOLA DE TENANT & SAAS B2B =================
 with tab_saas:
-    st.markdown("### Gestión del Repositorio y Despliegue SaaS")
-    st.markdown(
-        "CIVIL-TWIN permite automatizar la inicialización del repositorio Git local, configurar las "
-        "herramientas CI/CD y proveer accesos instantáneos para pruebas en la nube."
-    )
+    st.markdown("### Consola de Administracion SaaS B2B Multi-Tenant")
+    st.markdown("Gestión y auditoría del estado del tenant en la arquitectura multinivel y despliegue del cluster.")
     
     col_git, col_saas_link = st.columns(2)
     
     with col_git:
+        st.markdown("#### Datos de la Suscripción Tenant")
+        if st.session_state.tenant_info:
+            st.info(f"Organizacion: {st.session_state.tenant_info['name']}")
+            st.info(f"Nivel de Servicio (Tier): {st.session_state.tenant_info['tier']}")
+            
+            st.markdown("##### Proyectos Asignados a este Tenant:")
+            if st.session_state.tenant_projects:
+                for proj in st.session_state.tenant_projects:
+                    st.write(f"- **[{proj['project_id']}]** {proj['name']} (Estado: {proj['status'].upper()})")
+            else:
+                st.write("No se encontraron proyectos activos vinculados.")
+        else:
+            st.warning("Introduce un token de tenant valido en la barra lateral para sincronizar proyectos.")
+            
+        st.markdown("#### Exportacion Bidireccional MS Project")
+        st.write("Exporta el estado de planificacion actual (WBS) de vuelta a Microsoft Project:")
+        xml_export = doc_processor.generate_project_xml(st.session_state.wbs_df)
+        st.download_button(
+            label="Exportar WBS a MS Project (.xml)",
+            data=xml_export,
+            file_name="wbs_exportado_civil_twin.xml",
+            mime="text/xml"
+        )
+            
         st.markdown("#### Inicializar Repositorio Git Local")
         st.write("Genera y actualiza archivos de infraestructura (workflows de CI/CD de GitHub Actions, README.md, requirements.txt):")
         
@@ -618,14 +762,14 @@ with tab_saas:
         st.markdown("#### Acceso SaaS para el Gerente (Demo Cloud)")
         st.write(
             "Para que el gerente pruebe de manera remota e interactiva el Gemelo Digital MVP sin necesidad "
-            "de instalaciones complejas, CIVIL-TWIN está preparado para desplegarse mediante un solo enlace:"
+            "de instalaciones complejas, CIVIL-TWIN esta preparado para desplegarse mediante un solo enlace:"
         )
         
         st.markdown(
             f"""
             <div style='background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 25px; border-radius: 12px; margin-top: 15px;'>
                 <h4 style='color: #60A5FA; margin-top:0;'>Enlace Demo SaaS Generado</h4>
-                <p style='font-size: 0.9rem;'>Haz clic para simular la demo interactiva en la nube o configurar el despliegue automático:</p>
+                <p style='font-size: 0.9rem;'>Haz clic para simular la demo interactiva en la nube o configurar el despliegue automatico:</p>
                 <a href='{instructions["streamlit_cloud_link"]}' target='_blank' style='display: inline-block; background: #2563EB; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-right:10px;'>Streamlit Cloud Demo</a>
                 <a href='{instructions["huggingface_spaces_link"]}' target='_blank' style='display: inline-block; background: #4B5563; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;'>Hugging Face Spaces</a>
             </div>

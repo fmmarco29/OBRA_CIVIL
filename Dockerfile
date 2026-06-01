@@ -1,27 +1,29 @@
 FROM python:3.12-slim
 
-# Evitar que Python escriba archivos .pyc y forzar salida sin buffering
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias
+# Instalar dependencias de sistema y herramientas
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar requerimientos e instalar dependencias de Python
+# Copiar e instalar requerimientos
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto del código de la aplicación
+# Copiar el resto de archivos del proyecto
 COPY . .
 
-# Exponer el puerto por defecto de Streamlit
+# Asignar permisos de ejecucion al script de inicio
+RUN chmod +x start.sh
+
+# Exponer el puerto del frontend (Streamlit) para Hugging Face
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-
-ENTRYPOINT ["streamlit", "run", "app_streamlit.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Endpoint unificado de inicio
+ENTRYPOINT ["./start.sh"]
