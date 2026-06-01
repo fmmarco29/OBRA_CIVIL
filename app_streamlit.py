@@ -33,15 +33,15 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Outfit', sans-serif; }
-    .stApp { background: #F8FAFC; color: #1E293B; }
-    .kpi-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; }
-    .kpi-title { font-size: 0.85rem; color: #64748B; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-    .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1.2; color: #0F172A; }
+    .stApp { background: radial-gradient(circle at 10% 20%, rgba(20, 24, 43, 1) 0%, rgba(8, 10, 15, 1) 100%); color: #E2E8F0; }
+    .kpi-card { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); transition: transform 0.3s ease; }
+    .kpi-title { font-size: 0.85rem; color: #94A3B8; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+    .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1.2; }
     .alert-banner { border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; border-left: 5px solid; }
-    .alert-critical { background: #FEE2E2; border-color: #EF4444; color: #991B1B; }
-    .alert-warning { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
-    .alert-success { background: #D1FAE5; border-color: #10B981; color: #065F46; }
-    .main-header { background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border-radius: 16px; padding: 30px 40px; margin-bottom: 30px; border: 1px solid #BFDBFE; }
+    .alert-critical { background: rgba(239, 68, 68, 0.1); border-color: #EF4444; color: #FCA5A5; }
+    .alert-warning { background: rgba(245, 158, 11, 0.1); border-color: #F59E0B; color: #FDE047; }
+    .alert-success { background: rgba(16, 185, 129, 0.1); border-color: #10B981; color: #A7F3D0; }
+    .main-header { background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); border-radius: 16px; padding: 30px 40px; margin-bottom: 30px; }
     </style>
     """, unsafe_allow_html=True
 )
@@ -127,12 +127,12 @@ st.markdown(
     <div class='main-header'>
         <div style='display: flex; justify-content: space-between; align-items: center;'>
             <div>
-                <h1 style='color: #1E3A8A; margin: 0; font-weight: 800; font-size: 2.2rem;'>DSS Fuerteventura - Pozo Negro</h1>
-                <p style='color: #3B82F6; margin: 5px 0 0 0; font-size: 1.05rem;'>Sistema Integrado API (Fase 1 y 2 Completadas)</p>
+                <h1 style='color: white; margin: 0; font-weight: 800; font-size: 2.2rem;'>DSS Fuerteventura - Pozo Negro</h1>
+                <p style='color: #93C5FD; margin: 5px 0 0 0; font-size: 1.05rem;'>Sistema Integrado API (Fase 1 y 2 Completadas)</p>
             </div>
-            <div style='text-align: right; background: rgba(255,255,255,0.5); padding: 10px 20px; border-radius: 8px;'>
-                <span style='color: #64748B; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;'>BAC (Presupuesto Base de Datos)</span>
-                <h2 style='color: #059669; margin: 0; font-weight: 700;'>€{budget:,.2f}</h2>
+            <div style='text-align: right; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px;'>
+                <span style='color: #93C5FD; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;'>BAC (Presupuesto Base de Datos)</span>
+                <h2 style='color: #34D399; margin: 0; font-weight: 700;'>€{budget:,.2f}</h2>
             </div>
         </div>
     </div>
@@ -184,14 +184,14 @@ with tab_dashboard:
         fig.add_trace(go.Scatter(x=days, y=pv_curve, name="Planned Value", line=dict(color='#60A5FA', width=3)))
         fig.add_trace(go.Scatter(x=actual_days, y=ev_curve, name="Earned Value", line=dict(color='#34D399', width=3, dash='dash')))
         fig.add_trace(go.Scatter(x=actual_days, y=ac_curve, name="Actual Cost", line=dict(color='#EF4444', width=3)))
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#1E293B', height=400)
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E2E8F0', height=400)
         st.plotly_chart(fig, use_container_width=True)
 
     with col_gantt:
         df_g = st.session_state.wbs_df.copy()
         df_g["End_Day"] = df_g["Start_Day"] + df_g["Duration"]
         fig_g = px.timeline(df_g, x_start=df_g["Start_Day"].astype(str), x_end=df_g["End_Day"].astype(str), y="Task", color="Cost")
-        fig_g.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#1E293B', yaxis=dict(autorange="reversed"), height=400)
+        fig_g.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E2E8F0', yaxis=dict(autorange="reversed"), height=400)
         st.plotly_chart(fig_g, use_container_width=True)
 
 with tab_actuals:
@@ -294,7 +294,7 @@ with tab_risk:
                     fig_mc = px.histogram(x=costs_array, nbins=50, color_discrete_sequence=['#3B82F6'])
                     fig_mc.add_vline(x=sim_results["p50_cost"] / 1e6, line_color="#F59E0B", annotation_text=f"P50")
                     fig_mc.add_vline(x=sim_results["p90_cost"] / 1e6, line_dash="dash", line_color="#EF4444", annotation_text=f"P90")
-                    fig_mc.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#1E293B', height=350)
+                    fig_mc.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E2E8F0', height=350)
                     st.plotly_chart(fig_mc, use_container_width=True)
                 else:
                     st.error(f"Error en API: {res.text}")
