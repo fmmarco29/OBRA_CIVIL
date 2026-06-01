@@ -171,6 +171,7 @@ Basándose en el estado diario del Gemelo Digital y las predicciones probabilís
 \\end{{center}}
 
 \\end{{document}}
+"""
         return latex_template
 
     def generate_pdf_report(self, metadata, evm_metrics, risk_results):
