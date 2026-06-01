@@ -39,6 +39,16 @@ class LaTeXReportGenerator:
 
         date_str = datetime.date.today().strftime("%d/%m/%Y")
 
+        if cv < 0:
+            cv_text = f"El proyecto presenta un \\textbf{{sobrecoste acumulado}} de €{abs(cv):,.2f} respecto al avance real logrado."
+        else:
+            cv_text = "El proyecto se encuentra en una situación de \\textbf{{ahorro en costes}} respecto al avance logrado."
+            
+        if sv < 0:
+            sv_text = f"Asimismo, se registra un \\textbf{{retraso temporal}} equivalente a €{abs(sv):,.2f} en valor de obra no ejecutada."
+        else:
+            sv_text = "De igual modo, el avance temporal está \\textbf{{adelantado}} respecto al cronograma de referencia."
+
         # Plantilla LaTeX elegante y profesional
         latex_template = f"""\\documentclass[11pt,a4paper]{{article}}
 \\usepackage[utf8]{{inputenc}}
@@ -124,8 +134,8 @@ Desviación Estimada al Finalizar (VAC) & €{vac:,.2f} \\\\
 \\end{{table}}
 
 \\subsection{{Diagnóstico del Gemelo Digital}}
-{f"El proyecto presenta un \\textbf{{sobrecoste acumulado}} de €{abs(cv):,.2f} respecto al avance real logrado." if cv < 0 else "El proyecto se encuentra en una situación de \\textbf{{ahorro en costes}} respecto al avance logrado."}
-{f"Asimismo, se registra un \\textbf{{retraso temporal}} equivalente a €{abs(sv):,.2f} en valor de obra no ejecutada." if sv < 0 else "De igual modo, el avance temporal está \\textbf{{adelantado}} respecto al cronograma de referencia."}
+{cv_text}
+{sv_text}
 
 \\section{{Simulación de Monte Carlo y Predicción de Riesgos Geotécnicos}}
 Mediante modelos de Machine Learning (Random Forest) entrenados con bases de datos públicas de seguridad e infraestructuras, se clasifica el nivel de riesgo geotécnico en el frente de excavación del túnel. Adicionalmente, se ejecuta una simulación de Monte Carlo con 5.000 iteraciones para prever los escenarios de costes y plazos finales bajo incertidumbre.
