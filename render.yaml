@@ -3,6 +3,7 @@ services:
   - type: web
     name: civil-twin-api
     env: docker
+    plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
     dockerCommand: "uvicorn src.api.main:app --host 0.0.0.0 --port $PORT"
@@ -16,6 +17,7 @@ services:
   - type: web
     name: civil-twin-ui
     env: docker
+    plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
     dockerCommand: "streamlit run app_streamlit.py --server.port $PORT --server.address 0.0.0.0"
