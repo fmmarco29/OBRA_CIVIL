@@ -15,18 +15,12 @@ services:
       - PYTHONUNBUFFERED=1
 
   frontend:
-    build: .
-    container_name: civil_twin_frontend
-    command: streamlit run app_streamlit.py --server.port=8501 --server.address=0.0.0.0
+    build: ./frontend
+    container_name: civil_twin_nextjs
     ports:
-      - "8501:8501"
+      - "3000:3000"
     restart: always
-    volumes:
-      - .:/app
     depends_on:
       - api
-    links:
-      - api:backend
-      - api:api
     environment:
-      - STREAMLIT_THEME_BASE=dark
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
