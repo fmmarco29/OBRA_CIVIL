@@ -6,12 +6,19 @@ from typing import List, Dict, Any, Optional
 import pandas as pd
 
 from src.core.engine import MonteCarloSimulator, KnowledgeGraphEngine, BayesianRiskEngine
+from src.database.session import engine, Base
+from src.api.routers import projects
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="CIVIL-TWIN Enterprise API",
     description="SaaS B2B Backend de grado empresarial para simulaciones tecnicas y analisis de riesgos de obra civil",
     version="3.0.0"
 )
+
+app.include_router(projects.router)
 
 # Configuracion de CORS para permitir la comunicacion con el frontend
 app.add_middleware(

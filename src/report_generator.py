@@ -171,5 +171,36 @@ Basándose en el estado diario del Gemelo Digital y las predicciones probabilís
 \\end{{center}}
 
 \\end{{document}}
-"""
         return latex_template
+
+    def generate_pdf_report(self, metadata, evm_metrics, risk_results):
+        import tempfile
+        import subprocess
+        import os
+        
+        latex_code = self.generate_report(metadata, evm_metrics, risk_results)
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tex_file = os.path.join(tmpdir, "report.tex")
+            with open(tex_file, "w", encoding="utf-8") as f:
+                f.write(latex_code)
+                
+            # Compile twice to resolve references/formatting
+            try:
+                for _ in range(2):
+                    subprocess.run(
+                        ["pdflatex", "-interaction=nonstopmode", "report.tex"],
+                        cwd=tmpdir,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=True
+                    )
+            except subprocess.CalledProcessError:
+                raise RuntimeError("Error compiling LaTeX to PDF")
+                
+            pdf_file = os.path.join(tmpdir, "report.pdf")
+            if os.path.exists(pdf_file):
+                with open(pdf_file, "rb") as f:
+                    return f.read()
+            else:
+                raise RuntimeError("PDF file was not generated.")

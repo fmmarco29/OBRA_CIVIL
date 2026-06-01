@@ -1,29 +1,21 @@
-FROM python:3.12-slim
+# Ultra-slim build
+FROM python:3.11-slim
 
+# Evitar escritura de bytecode y logs para ahorrar disco
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalar dependencias de sistema y herramientas
+# Instalar latex estrictamente minimo (Ahorra > 2GB)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    texlive-latex-base \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Copiar e instalar requerimientos
+# Instalar dependencias
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto de archivos del proyecto
+# Copiar el código fuente
 COPY . .
-
-# Asignar permisos de ejecucion al script de inicio
-RUN chmod +x start.sh
-
-# Exponer el puerto del frontend (Streamlit) para Hugging Face
-EXPOSE 8501
-
-# Endpoint unificado de inicio
-ENTRYPOINT ["./start.sh"]
